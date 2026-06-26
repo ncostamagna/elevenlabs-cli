@@ -4,13 +4,26 @@ import * as path from 'path';
 import dotenv from 'dotenv';
 dotenv.config();
 
-const [voiceId, folderName, inputFile] = process.argv.slice(2);
+const DEFAULT_VOICE_ID = 'CIvegTlxTePhYSiBL1r4';
 
-if (!voiceId || !folderName || !inputFile) {
-  console.error('Usage: npm run audio <voice_id> <folder_name> <input_file>');
-  console.error('Example: npm run audio JBFqnCBsd6RMkjVDRZzb daily-1 my-file.txt');
+const args = new Map<string, string>();
+for (const arg of process.argv.slice(2)) {
+  const match = arg.replace(/^--/, '').match(/^([^=]+)=(.*)$/);
+  if (match) {
+    args.set(match[1], match[2]);
+  }
+}
+
+const inputFile = args.get('file');
+
+if (!inputFile) {
+  console.error('Usage: npm run audio file=<input_file> [voice=<voice_id>] [name=<name>]');
+  console.error('Example: npm run audio file=lala.txt');
   process.exit(1);
 }
+
+const voiceId = args.get('voice') || DEFAULT_VOICE_ID;
+const folderName = args.get('name') || path.basename(inputFile, path.extname(inputFile));
 
 const inputPath = path.join('input', inputFile);
 
@@ -44,15 +57,15 @@ const audio = await client.textToSpeech.convert(voiceId, {
   modelId: 'eleven_multilingual_v2',
   outputFormat: 'mp3_44100_128',
   voiceSettings: {
-    stability: 0.5,
+    stability: 0.7,
     similarityBoost: 0.75,
-    style: 0.2,
+    style: 0,
     speed: 1,
     useSpeakerBoost: true,
   },
 });
 
-const outputPath = path.join(outputDir, 'output.mp3');
+const outputPath = path.join(outputDir, `${folderName}.mp3`);
 const chunks: Buffer[] = [];
 
 for await (const chunk of audio) {
